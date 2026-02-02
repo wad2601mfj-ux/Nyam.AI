@@ -1267,6 +1267,7 @@
                 { keyword: 'rendang', type: 'food', category: 'indonesian' },
                 { keyword: 'ayam bakar', type: 'food', category: 'indonesian' },
                 { keyword: 'sweet', type: 'taste', category: 'dessert' },
+                { keyword: 'manis', type: 'taste', category: 'dessert' },
                 { keyword: 'cake', type: 'food', category: 'dessert' },
                 { keyword: 'dessert', type: 'food', category: 'dessert' },
                 { keyword: 'ice cream', type: 'food', category: 'dessert' },
@@ -1287,6 +1288,24 @@
                 { keyword: 'simple', type: 'complexity', category: 'simple' },
                 { keyword: 'last longer', type: 'quantity', category: 'large' },
                 { keyword: 'a lot', type: 'quantity', category: 'large' },
+                { keyword: 'much', type: 'quantity', category: 'large' },
+                { keyword: 'banyak', type: 'quantity', category: 'large' },
+                { keyword: 'porsi besar', type: 'quantity', category: 'large' },
+                { keyword: 'jumbo', type: 'quantity', category: 'large' },
+                { keyword: 'kenyang', type: 'quantity', category: 'large' },
+                { keyword: 'full', type: 'quantity', category: 'large' },
+                { keyword: 'extra', type: 'quantity', category: 'large' },
+                { keyword: 'less', type: 'quantity', category: 'small' },
+                { keyword: 'sedikit', type: 'quantity', category: 'small' },
+                { keyword: 'small', type: 'quantity', category: 'small' },
+                { keyword: 'kecil', type: 'quantity', category: 'small' },
+                { keyword: 'light', type: 'quantity', category: 'small' },
+                { keyword: 'ringan', type: 'quantity', category: 'small' },
+                { keyword: 'half', type: 'quantity', category: 'small' },
+                { keyword: 'setengah', type: 'quantity', category: 'small' },
+                { keyword: 'food', type: 'general', category: 'general' },
+                { keyword: 'makan', type: 'general', category: 'general' },
+                { keyword: 'eat', type: 'general', category: 'general' },
                 { keyword: 'drink', type: 'drink', category: 'beverage' },
                 { keyword: 'beverage', type: 'drink', category: 'beverage' }
             ];
@@ -1306,10 +1325,12 @@
             }
             
             let response = "Perfect! ";
-            const foodTypes = keywords.filter(k => k.type === 'food' || k.type === 'drink' || k.type === 'cuisine');
+            const foodTypes = keywords.filter(k => k.type === 'food' || k.type === 'drink' || k.type === 'cuisine' || k.type === 'general');
             if (foodTypes.length > 0) {
                 const foods = [...new Set(foodTypes.map(f => f.keyword))].join(', ');
-                response += `Looking for ${foods}. `;
+                if (foods !== 'food' && foods !== 'eat' && foods !== 'makan') {
+                    response += `Looking for ${foods}. `;
+                }
             }
             
             const pricePref = keywords.find(k => k.type === 'price');
@@ -1318,8 +1339,12 @@
             }
             
             const quantityPref = keywords.find(k => k.type === 'quantity');
-            if (quantityPref && (quantityPref.keyword === 'a lot' || quantityPref.keyword === 'last longer')) {
-                response += "Looking for generous portions. ";
+            if (quantityPref) {
+                if (quantityPref.category === 'large') {
+                    response += "Looking for generous portions. ";
+                } else if (quantityPref.category === 'small') {
+                    response += "Looking for smaller/light portions. ";
+                }
             }
             
             const healthPref = keywords.find(k => k.type === 'health');
@@ -1343,6 +1368,13 @@
             const relevantSellers = filterRelevantSellers(request.keywords);
             
             if (relevantSellers.length === 0) {
+                // If no specific food mentioned, show general options
+                if (!request.keywords.some(k => k.type === 'food' || k.type === 'drink' || k.type === 'cuisine')) {
+                    // Show general light/small options
+                    showGeneralLightOptions(request);
+                    return;
+                }
+                
                 const noOffersHtml = `<div class="no-offers"><i class="fas fa-search fa-2x"></i><p>No sellers found for your request</p><p>Try being more specific</p></div>`;
                 document.getElementById('mobileOffersList').innerHTML = noOffersHtml;
                 document.getElementById('desktopOffersList').innerHTML = noOffersHtml;
@@ -1350,6 +1382,24 @@
             }
             
             relevantSellers.forEach((seller, index) => {
+                setTimeout(() => {
+                    generateSellerOffer(request, seller);
+                    activeOffers++;
+                    updateOfferCounts();
+                }, index * 500);
+            });
+        }
+
+        function showGeneralLightOptions(request) {
+            // Show light meal options when user just says "less" without specifying food
+            const lightSellers = [
+                { name: "Healthy Bowl", items: ["Small Salad", "Light Quinoa Bowl"], basePrice: 18000 },
+                { name: "Juice Bar", items: ["Green Juice", "Fruit Smoothie"], basePrice: 15000 },
+                { name: "Quick Bites", items: ["Small Sandwich", "Half Burger"], basePrice: 20000 },
+                { name: "Sweet Bakery", items: ["Cookie", "Small Donut"], basePrice: 12000 }
+            ];
+            
+            lightSellers.forEach((seller, index) => {
                 setTimeout(() => {
                     generateSellerOffer(request, seller);
                     activeOffers++;
@@ -1377,8 +1427,21 @@
             const hasHealthy = keywords.some(k => k.category === 'healthy');
             const hasBeverage = keywords.some(k => k.category === 'beverage');
             const wantsCheap = keywords.some(k => k.category === 'cheap');
+            const wantsSmall = keywords.some(k => k.category === 'small');
             
-            // Category filtering logic (same as before)
+            // If only "less" is mentioned, show light options
+            const onlyQuantityKeywords = keywords.length === 1 && keywords[0].type === 'quantity';
+            
+            if (onlyQuantityKeywords && wantsSmall) {
+                return [
+                    sampleSellers.find(s => s.name === "Healthy Bowl"),
+                    sampleSellers.find(s => s.name === "Juice Bar"),
+                    sampleSellers.find(s => s.name === "Quick Bites"),
+                    sampleSellers.find(s => s.name === "Sweet Bakery")
+                ].filter(s => s);
+            }
+            
+            // Category filtering logic
             if (hasIndonesian) {
                 filteredSellers = filteredSellers.concat(
                     sampleSellers.filter(seller => 
@@ -1468,7 +1531,8 @@
             
             filteredSellers = [...new Map(filteredSellers.map(seller => [seller.name, seller])).values()];
             
-            if (wantsCheap) {
+            // Sort by price for cheap or small portions
+            if (wantsCheap || wantsSmall) {
                 filteredSellers.sort((a, b) => a.basePrice - b.basePrice);
             }
             
@@ -1477,7 +1541,14 @@
 
         function generateSellerOffer(request, seller) {
             const variation = Math.floor(Math.random() * 4000) - 2000;
-            const finalPrice = Math.max(seller.basePrice + variation, 12000);
+            
+            // Adjust price for small portions
+            let portionAdjustment = 0;
+            if (request.keywords.some(k => k.category === 'small')) {
+                portionAdjustment = -Math.floor(seller.basePrice * 0.3); // 30% cheaper for small portions
+            }
+            
+            const finalPrice = Math.max(seller.basePrice + variation + portionAdjustment, 8000);
             const offeredItems = selectItems(seller.items, request.keywords);
             let deliveryTime = Math.floor(Math.random() * 30) + 15;
             
@@ -1485,12 +1556,21 @@
                 deliveryTime = Math.floor(Math.random() * 15) + 10;
             }
             
+            // Adjust item names for small portions
+            let displayItems = offeredItems;
+            if (request.keywords.some(k => k.category === 'small')) {
+                displayItems = offeredItems.map(item => {
+                    const smallPrefix = ["Small ", "Half ", "Light ", "Mini "];
+                    return smallPrefix[Math.floor(Math.random() * smallPrefix.length)] + item;
+                });
+            }
+            
             const offer = {
                 id: generateId(),
                 requestId: request.id,
                 seller: seller.name,
                 price: finalPrice,
-                items: offeredItems,
+                items: displayItems,
                 deliveryTime: deliveryTime,
                 timestamp: new Date().toISOString()
             };

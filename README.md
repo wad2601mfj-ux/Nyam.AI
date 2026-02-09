@@ -1,6 +1,6 @@
 # Nyam.AI - Food Delivery Web Application
 
-KingStore is a modern food delivery web application with a sweet and user-friendly interface. This project features a real-time chat system between buyers and sellers, powered by Firebase for seamless communication.
+Nyam.AI is a modern food delivery web application with a sweet and user-friendly interface. This project features a real-time chat system between buyers and sellers, powered by Firebase for seamless communication.
 
 # 🛒 Buyer Panel
 

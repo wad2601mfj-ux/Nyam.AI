@@ -6,17 +6,63 @@
     <title>Nyam.AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        :root { --primary: #4361ee; --secondary: #f72585; --bg: #b4ccf1; --text: #1e293b; --card: #ffffff; }
+        /* ========== STYLES (unchanged) ========== */
+        :root { --primary: #4361ee; --secondary: #f72585; --bg-start: #1e3a8a; --bg-mid: #3b82f6; --bg-end: #93c5fd; --text: #1e293b; --card: #ffffff; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background: var(--bg); color: var(--text); height: 100vh; width: 100vw; display: flex; flex-direction: column; overflow: hidden; }
         
-        .header { flex-shrink: 0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 50; }
-        .brand { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        body {
+            background: linear-gradient(45deg, var(--bg-start), var(--bg-mid), var(--bg-end), #60a5fa, #2563eb);
+            background-size: 400% 400%;
+            animation: gradientSwipe 12s ease infinite;
+            color: var(--text);
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        @keyframes gradientSwipe {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .header {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 50;
+        }
+        
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            100% { transform: scale(1); }
+        }
         
         .header-actions { display: flex; gap: 15px; align-items: center; }
         .btn-icon { position: relative; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
@@ -33,8 +79,20 @@
         .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
         .bot { align-self: flex-start; background: #f1f5f9; color: #333; border: 1px solid #eee; }
         .user { align-self: flex-end; background: var(--primary); color: white; }
+        .chat-buyer { align-self: flex-end; background: var(--primary); color: white; }
+        .chat-seller { align-self: flex-start; background: #e9e9e9; color: #333; }
 
         .input-area { padding: 15px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
+        
+        #map {
+            height: 120px;
+            width: 100%;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            z-index: 10;
+        }
+        
         .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
         .chip { padding: 6px 12px; background: #eff6ff; color: var(--primary); border: 1px solid #dbeafe; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; font-weight: 500; }
         .chip:hover { background: var(--primary); color: white; }
@@ -47,9 +105,22 @@
         .feed { flex: 1; padding: 15px; overflow-y: auto; padding-bottom: 80px; }
         .card { background: white; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden; animation: slideIn 0.3s ease; border: 1px solid #f1f5f9; transition: 0.3s; }
         
-        .card-img { width: 100%; height: 400px; background: #eee; position: relative; overflow: hidden; }
+        .card-media {
+            display: flex;
+            width: 100%;
+            height: 200px;
+            background: #eee;
+        }
+        .card-img, .card-video {
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .card-img { border-right: 1px solid #ddd; }
         .food-pic { width: 100%; height: 100%; object-fit: cover; }
-        .seller-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: #333; }
+        .card-video video { width: 100%; height: 100%; object-fit: cover; }
+        .seller-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: #333; z-index: 2; }
         .cat-badge { position: absolute; top: 8px; right: 8px; background: var(--secondary); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; z-index: 5; }
 
         .card-body { padding: 15px; }
@@ -59,7 +130,7 @@
         .original-price { font-size: 0.9rem; color: #94a3b8; text-decoration: line-through; margin-right: 8px; }
         .ai-note { font-size: 0.7rem; color: #10b981; font-weight: 600; background: #dcfce7; padding: 2px 6px; border-radius: 4px; }
 
-        .card-actions { display: flex; gap: 10px; align-items: center; }
+        .card-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .qty-input { width: 60px; padding: 10px; border: 2px solid #e2e8f0; border-radius: 10px; text-align: center; font-weight: bold; font-size: 1rem; }
         .qty-input:focus { border-color: var(--primary); outline: none; }
 
@@ -67,24 +138,176 @@
         .btn-cart-add:hover { background: #334155; }
         .btn-cart-add:active { transform: scale(0.98); }
 
-        /* Special offer badge */
+        .btn-all-options {
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-all-options:hover { background: #2563eb; }
+
+        .btn-bargain {
+            padding: 12px;
+            background: #f97316;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-bargain:hover { background: #ea580c; }
+
         .offer-badge { background: #f97316; color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; margin-left: 5px; }
 
-        /* CART MODAL */
+        /* ========== MODAL STYLES ========== */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .cart-modal { background: white; width: 90%; max-width: 450px; max-height: 85vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; animation: slideUp 0.3s ease; }
-        .cart-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
-        .cart-body { padding: 20px; overflow-y: auto; flex: 1; }
-        .cart-footer { padding: 20px; border-top: 1px solid #eee; background: white; }
-        
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
-        .cart-item-info div:first-child { font-weight: 600; color: #333; }
-        .cart-item-info div:last-child { font-size: 0.8rem; color: #64748b; }
-        .cart-item-price { font-weight: 700; color: var(--primary); margin-right: 10px; }
-        .btn-remove { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 1rem; }
+        .cart-modal, .bargain-modal, .all-options-modal, .checkout-modal, .success-modal { background: white; width: 90%; max-width: 500px; max-height: 85vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; animation: slideUp 0.3s ease; }
 
-        .btn-checkout { width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; }
-        .btn-checkout:hover { background: #059669; }
+        .modal-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 15px; }
+        .modal-footer { padding: 15px; border-top: 1px solid #eee; }
+
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 10px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+        .cart-item-left { flex: 1; }
+        .cart-item-name { font-weight: 600; margin-bottom: 4px; }
+        .cart-item-desc { font-size: 0.8rem; color: #64748b; display: flex; gap: 10px; flex-wrap: wrap; }
+        .cart-item-price { font-weight: 700; color: var(--primary); }
+        .btn-remove { background: #ef4444; color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; margin-left: 10px; }
+
+        .option-item, .bargain-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .option-info, .bargain-info { flex: 1; }
+        .option-info .item-name { font-size: 1.2rem; font-weight: 700; color: #1e293b; }
+        .option-info .seller { font-size: 0.9rem; color: #64748b; margin: 2px 0; }
+        .option-price { font-size: 1rem; font-weight: 700; color: var(--primary); margin: 4px 0; }
+        .option-original { font-size: 0.8rem; color: #94a3b8; text-decoration: line-through; margin-left: 8px; }
+        .option-contact { font-size: 0.75rem; color: #64748b; }
+        .option-actions { display: flex; gap: 8px; align-items: center; }
+        .option-qty { width: 50px; padding: 6px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; }
+        .btn-option-add, .btn-bargain-add { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+        .btn-option-bargain { background: #f97316; color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+
+        .bargain-item .bargain-info .seller { font-size: 1rem; font-weight: 600; color: #1e293b; }
+        .bargain-item .bargain-info .price { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+        .bargain-item .bargain-info .original-price { font-size: 0.8rem; color: #94a3b8; text-decoration: line-through; margin-left: 8px; }
+        .bargain-item .bargain-info .contact { font-size: 0.75rem; color: #64748b; }
+
+        .success-icon { font-size: 4rem; color: #10b981; text-align: center; margin-bottom: 15px; }
+        .success-details { background: #f8fafc; padding: 15px; border-radius: 10px; }
+        .success-details p { margin-bottom: 5px; }
+        .success-details .label { font-weight: 600; color: #334155; }
+
+        .chat-float {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 300;
+            transition: transform 0.2s;
+        }
+        .chat-float:hover { transform: scale(1.1); }
+
+        .chat-popup {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 350;
+            border: 1px solid #e2e8f0;
+        }
+        .chat-popup.show { display: flex; }
+        .chat-header {
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h3 { font-size: 1rem; font-weight: 600; }
+        .chat-header i { cursor: pointer; }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f9f9f9;
+        }
+        .chat-msg {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+        .chat-msg small {
+            font-size: 0.7rem;
+            display: block;
+            margin-bottom: 2px;
+            opacity: 0.8;
+        }
+        .chat-input-area {
+            padding: 10px;
+            border-top: 1px solid #eee;
+            display: flex;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+        }
+        .chat-input-area button {
+            margin-left: 8px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        .chat-clear {
+            background: #ef4444;
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-left: 5px;
+        }
 
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
@@ -101,6 +324,7 @@
             .nav-item.active { color: var(--primary); font-weight: bold; }
             .input-area { padding-bottom: 70px; }
             .feed { padding-bottom: 70px; }
+            .chat-popup { width: 300px; right: 10px; }
         }
     </style>
 </head>
@@ -132,6 +356,8 @@
             </div>
         </div>
         <div class="input-area">
+            <div id="map"></div>
+            
             <div class="chips">
                 <div class="chip" onclick="setInput('I\'m thirsty')">🥤 Thirsty</div>
                 <div class="chip" onclick="setInput('Something sweet')">🍰 Sweet</div>
@@ -141,9 +367,10 @@
             
             <div class="row">
                 <div class="inp-grp" style="width: 100%;">
-                    <input type="text" id="addr" placeholder="Delivery Address (Required)">
+                    <input type="text" id="addr" placeholder="Delivery Address (Required)" onchange="updateMap()">
                 </div>
             </div>
+
             <div class="row">
                 <div class="inp-grp">
                     <input type="text" id="item" placeholder="Type your wish..." onkeypress="if(event.key==='Enter') startProcessing()">
@@ -159,10 +386,7 @@
             <span style="font-size:0.75rem; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px;">Smart Match</span>
         </div>
         <div class="feed" id="feed">
-            <div style="text-align:center; margin-top:50px; color:#aaa;">
-                <i class="fas fa-search fa-3x" style="margin-bottom:10px; opacity:0.3;"></i>
-                <p>Waiting for request...</p>
-            </div>
+            <!-- will be populated -->
         </div>
     </div>
 </div>
@@ -172,38 +396,141 @@
     <div class="nav-item" onclick="tab('auc', this)"><i class="fas fa-store"></i> Offers</div>
 </div>
 
+<!-- Floating Chat Button -->
+<div class="chat-float" onclick="toggleChatPopup()">
+    <i class="fas fa-comment"></i>
+</div>
+
+<!-- Chat Popup -->
+<div class="chat-popup" id="chatPopup">
+    <div class="chat-header">
+        <h3><i class="fas fa-comments"></i> Live Chat</h3>
+        <i class="fas fa-times" onclick="toggleChatPopup()"></i>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+        <button class="chat-clear" onclick="clearChat()">Clear</button>
+    </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Cart Modal -->
 <div class="overlay" id="cartModal">
     <div class="cart-modal">
-        <div class="cart-header">
-            <h3><i class="fas fa-shopping-bag"></i> Your Cart</h3>
-            <i class="fas fa-times" style="cursor:pointer; font-size:1.2rem;" onclick="closeCart()"></i>
+        <div class="modal-header">
+            <h3>Your Cart</h3>
+            <i class="fas fa-times" onclick="closeCart()" style="cursor:pointer;"></i>
         </div>
-        <div class="cart-body" id="cartList">
-            <p style="text-align:center; color:#999; margin-top:20px;">Cart is empty.</p>
-        </div>
-        <div class="cart-footer">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:bold; font-size:1.1rem;">
-                <span>Total</span>
+        <div class="modal-body" id="cartList"></div>
+        <div class="modal-footer">
+            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:10px;">
+                <span>Total:</span>
                 <span id="cartTotal">Rp 0</span>
             </div>
-            <button class="btn-checkout" onclick="checkout()">
-                CHECKOUT NOW <i class="fas fa-arrow-right"></i>
-            </button>
+            <button style="width:100%; padding:12px; background:#4361ee; color:white; border:none; border-radius:10px; font-weight:600;" onclick="proceedToCheckout()">Checkout</button>
         </div>
     </div>
 </div>
 
+<!-- History Modal -->
 <div class="overlay" id="histModal">
     <div class="cart-modal">
-        <div class="cart-header">
+        <div class="modal-header">
             <h3>Order History</h3>
-            <i class="fas fa-times" style="cursor:pointer;" onclick="closeHistModal()"></i>
+            <i class="fas fa-times" onclick="closeHistModal()" style="cursor:pointer;"></i>
         </div>
-        <div class="cart-body" id="histList">Loading...</div>
+        <div class="modal-body" id="histList"></div>
+    </div>
+</div>
+
+<!-- Bargain Modal -->
+<div class="overlay" id="bargainModal">
+    <div class="bargain-modal">
+        <div class="modal-header">
+            <h3>Bargain Options</h3>
+            <i class="fas fa-times" onclick="closeBargainModal()" style="cursor:pointer;"></i>
+        </div>
+        <div class="modal-body" id="bargainList"></div>
+    </div>
+</div>
+
+<!-- All Options Modal -->
+<div class="overlay" id="allOptionsModal">
+    <div class="all-options-modal">
+        <div class="modal-header">
+            <h3>All Options</h3>
+            <i class="fas fa-times" onclick="closeAllOptionsModal()" style="cursor:pointer;"></i>
+        </div>
+        <div class="modal-body" id="allOptionsList"></div>
+    </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="overlay" id="checkoutModal">
+    <div class="checkout-modal">
+        <div class="modal-header">
+            <h3>Checkout</h3>
+            <i class="fas fa-times" onclick="closeCheckoutModal()" style="cursor:pointer;"></i>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="buyerName" placeholder="Your name" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:10px;">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" id="buyerPhone" placeholder="08xxx" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:10px;">
+            </div>
+            <div class="form-group">
+                <label>Delivery Address</label>
+                <input type="text" id="buyerAddress" placeholder="Same as above or new" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:10px;">
+            </div>
+            <div class="form-group">
+                <label>Payment Method</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <label><input type="radio" name="payment" value="Virtual Account" checked> Virtual Account</label>
+                    <label><input type="radio" name="payment" value="Credit Card"> Credit Card</label>
+                    <label><input type="radio" name="payment" value="Cash on Delivery"> Cash on Delivery</label>
+                </div>
+                <div id="virtualSubOptions" style="margin-top:10px; display:block;">
+                    <select id="ewallet" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:10px;">
+                        <option value="BCA">BCA</option>
+                        <option value="Mandiri">Mandiri</option>
+                        <option value="BNI">BNI</option>
+                        <option value="BRI">BRI</option>
+                        <option value="GoPay">GoPay</option>
+                        <option value="OVO">OVO</option>
+                        <option value="Dana">Dana</option>
+                    </select>
+                </div>
+            </div>
+            <div id="checkoutSummary" style="background:#f8fafc; padding:15px; border-radius:10px; margin:15px 0;"></div>
+        </div>
+        <div class="modal-footer">
+            <button style="width:100%; padding:12px; background:#10b981; color:white; border:none; border-radius:10px; font-weight:600;" onclick="placeOrder()">Place Order</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="overlay" id="successModal">
+    <div class="success-modal">
+        <div class="modal-header">
+            <h3>Order Placed</h3>
+            <i class="fas fa-times" onclick="closeSuccessModal()" style="cursor:pointer;"></i>
+        </div>
+        <div class="modal-body" id="successDetails"></div>
+        <div class="modal-footer">
+            <button style="width:100%; padding:12px; background:#4361ee; color:white; border:none; border-radius:10px; font-weight:600;" onclick="closeSuccessModal()">Continue Shopping</button>
+        </div>
     </div>
 </div>
 
 <script>
+    // ========== FIREBASE INIT ==========
     const firebaseConfig = {
         apiKey: "AIzaSyD7FOAqhpJNVq7J6iYBcknOqWdedCIYQvQ",
         authDomain: "kingstenderapp.firebaseapp.com",
@@ -215,127 +542,375 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // HARDCODED SELLERS (if any)
-    let hardcodedSellers = [];
+    // ========== BUYER ID ==========
+    let buyerId = localStorage.getItem('buyerId');
+    if (!buyerId) {
+        buyerId = prompt("Please enter your name for chat:") || "Guest" + Math.floor(Math.random()*1000);
+        localStorage.setItem('buyerId', buyerId);
+    }
 
-    let allSellers = [...hardcodedSellers];
+    // ========== GLOBAL VARIABLES ==========
+    let allSellers = [];
 
+    // ========== LOAD PRODUCTS ==========
     db.collection("products").onSnapshot((snapshot) => {
-        let dbSellers = [];
+        allSellers = [];
         snapshot.forEach((doc) => {
-            dbSellers.push({ id: doc.id, ...doc.data() });
+            allSellers.push({ id: doc.id, ...doc.data() });
         });
-        allSellers = [...hardcodedSellers, ...dbSellers];
-        console.log("DB Loaded:", allSellers.length);
+        console.log("Products loaded:", allSellers.length);
+        // Run a default search to show all products
+        runSmartRankedSearch("", Infinity, document.getElementById('addr').value || "Unknown");
     });
 
-    // SHOPPING CART
+    // ========== SHOPPING CART ==========
     let cart = [];
-
-    // Updated addToCart to accept discounted price
+    function updateCartBadge() { document.getElementById('cartCount').innerText = cart.length; }
     function addToCart(seller, item, price, id, addr) {
-        const qtyInput = document.getElementById('qty-' + id);
-        const qty = parseInt(qtyInput.value) || 1;
-        const totalPrice = (price * qty) + 3000;
-
-        cart.push({ seller, item, price: totalPrice, qty, id, address: addr });
+        const qty = parseInt(document.getElementById('qty-'+id).value) || 1;
+        const total = price * qty + 3000;
+        cart.push({ seller, item, price: total, qty, id, address: addr });
         updateCartBadge();
-        
         const btn = document.querySelector(`#${id} .btn-cart-add`);
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="fas fa-check"></i> Added!`;
-        btn.style.background = "#10b981";
-        
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.background = "#0f172a";
-        }, 1000);
+        btn.innerHTML = 'Added!'; btn.style.background = '#10b981';
+        setTimeout(() => { btn.innerHTML = 'ADD'; btn.style.background = '#0f172a'; }, 1000);
     }
-
-    function updateCartBadge() {
-        document.getElementById('cartCount').innerText = cart.length;
-        document.querySelector('.cart-badge').style.display = cart.length > 0 ? 'flex' : 'none';
-    }
-
-    function openCart() {
-        document.getElementById('cartModal').style.display = 'flex';
-        renderCartItems();
-    }
-
+    function openCart() { document.getElementById('cartModal').style.display = 'flex'; renderCart(); }
     function closeCart() { document.getElementById('cartModal').style.display = 'none'; }
-
-    function renderCartItems() {
-        const list = document.getElementById('cartList');
-        const totalEl = document.getElementById('cartTotal');
-        
-        if(cart.length === 0) {
-            list.innerHTML = `<div style="text-align:center; padding:30px; color:#aaa;">Cart is empty.</div>`;
-            totalEl.innerText = "Rp 0";
-            return;
-        }
-
-        let html = '';
-        let total = 0;
-
-        cart.forEach((c, index) => {
+    function renderCart() {
+        const list = document.getElementById('cartList'), totalSpan = document.getElementById('cartTotal');
+        if (cart.length === 0) { list.innerHTML = '<p style="text-align:center;">Cart is empty.</p>'; totalSpan.innerText = 'Rp 0'; return; }
+        let html = '', total = 0;
+        cart.forEach((c,i) => {
             total += c.price;
             html += `
-            <div class="cart-item">
-                <div class="cart-item-info">
-                    <div>${c.item} (x${c.qty})</div>
-                    <div><small>${c.seller}</small></div>
-                    <div style="font-size:0.75rem; color:#1e3a8a;">📍 To: ${c.address}</div>
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <div class="cart-item-price">Rp ${c.price.toLocaleString()}</div>
-                    <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash-alt"></i></button>
-                </div>
-            </div>`;
+                <div class="cart-item">
+                    <div class="cart-item-left">
+                        <div class="cart-item-name">${c.item} x${c.qty}</div>
+                        <div class="cart-item-desc">
+                            <span>${c.seller}</span>
+                            <span>📍 ${c.address}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <span class="cart-item-price">Rp ${c.price.toLocaleString()}</span>
+                        <button class="btn-remove" onclick="removeFromCart(${i})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
         });
-
         list.innerHTML = html;
-        totalEl.innerText = "Rp " + total.toLocaleString();
+        totalSpan.innerText = 'Rp ' + total.toLocaleString();
     }
+    function removeFromCart(index) { cart.splice(index,1); renderCart(); updateCartBadge(); }
 
-    function removeFromCart(index) {
-        cart.splice(index, 1);
-        renderCartItems();
-        updateCartBadge();
-    }
-
-    function checkout() {
-        if(cart.length === 0) return alert("Cart is empty!");
-        if(!confirm(`Pay Rp ${document.getElementById('cartTotal').innerText.replace('Rp ','')}?`)) return;
-
-        cart.forEach(c => {
-            db.collection("orders").add({
-                item: c.item + ` (x${c.qty})`, 
-                seller: c.seller,
-                total: c.price,
-                address: c.address,
-                status: "Paid",
-                time: new Date()
-            });
-        });
-
-        cart = [];
-        updateCartBadge();
+    // ========== CHECKOUT ==========
+    function proceedToCheckout() {
+        if (cart.length===0) return alert("Cart empty!");
         closeCart();
-        addChat('bot', `🎉 Order Placed! Check history.`);
+        document.getElementById('buyerAddress').value = document.getElementById('addr').value;
+        updateCheckoutSummary();
+        document.getElementById('checkoutModal').style.display = 'flex';
+    }
+    function updateCheckoutSummary() {
+        const div = document.getElementById('checkoutSummary');
+        let itemsTotal = 0;
+        cart.forEach(c => itemsTotal += (c.price-3000));
+        const delivery = 3000 * cart.length;
+        div.innerHTML = `<h4>Order Summary</h4>` +
+            cart.map(c => `<div class="order-summary-item"><span>${c.item} x${c.qty} (${c.seller})</span><span>Rp ${(c.price-3000).toLocaleString()}</span></div>`).join('') +
+            `<div class="order-summary-item"><span>Subtotal</span><span>Rp ${itemsTotal.toLocaleString()}</span></div>` +
+            `<div class="order-summary-item"><span>Delivery</span><span>Rp ${delivery.toLocaleString()}</span></div>` +
+            `<div class="order-summary-total"><span>Total</span><span>Rp ${(itemsTotal+delivery).toLocaleString()}</span></div>`;
+    }
+    document.addEventListener('change', e => {
+        if (e.target.name === 'payment') document.getElementById('virtualSubOptions').style.display = e.target.value === 'Virtual Account' ? 'block' : 'none';
+    });
+    function placeOrder() {
+        const name = document.getElementById('buyerName').value.trim();
+        const phone = document.getElementById('buyerPhone').value.trim();
+        const addr = document.getElementById('buyerAddress').value.trim();
+        const payment = document.querySelector('input[name="payment"]:checked').value;
+        const ewallet = payment === 'Virtual Account' ? document.getElementById('ewallet').value : null;
+        if (!name || !phone || !addr) return alert("Fill all fields!");
+        let itemsTotal = 0;
+        cart.forEach(c => itemsTotal += (c.price-3000));
+        const delivery = 3000 * cart.length, grand = itemsTotal + delivery;
+        const paymentString = payment + (ewallet ? ' via ' + ewallet : '');
+        Promise.all(cart.map(c => db.collection("orders").add({
+            buyerName: name, buyerPhone: phone, item: c.item, seller: c.seller,
+            quantity: c.qty, itemPrice: c.price-3000, deliveryFee: 3000, total: c.price,
+            address: addr, paymentMethod: paymentString, status: "Paid", time: new Date()
+        }))).then(() => {
+            const itemsHtml = cart.map(c => `<div>• ${c.item} x${c.qty} (${c.seller})</div>`).join('');
+            const now = new Date();
+            const orderId = 'ORD-' + now.getTime().toString().slice(-8);
+            document.getElementById('successDetails').innerHTML = `
+                <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                <h3 style="text-align:center;">Thank You, ${name}!</h3>
+                <div class="success-details">
+                    <p><span class="label">Order ID:</span> ${orderId}</p>
+                    <p><span class="label">Date:</span> ${now.toLocaleString()}</p>
+                    <p><span class="label">Phone:</span> ${phone}</p>
+                    <p><span class="label">Address:</span> ${addr}</p>
+                    <div style="margin:10px 0;"><span class="label">Items:</span> ${itemsHtml}</div>
+                    <p><span class="label">Payment:</span> ${paymentString}</p>
+                    <p><span class="label">Total:</span> Rp ${grand.toLocaleString()}</p>
+                </div>
+            `;
+            document.getElementById('successModal').style.display = 'flex';
+            cart = []; updateCartBadge(); closeCheckoutModal();
+        }).catch(err => alert(err.message));
+    }
+    function closeCheckoutModal() { document.getElementById('checkoutModal').style.display = 'none'; }
+    function continueShopping() { closeCheckoutModal(); }
+    function closeSuccessModal() { document.getElementById('successModal').style.display = 'none'; }
+
+    // ========== MAP ==========
+    let map, marker;
+    function initMap() {
+        map = L.map('map').setView([-6.2088, 106.8456], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        marker = L.marker([-6.2088, 106.8456]).addTo(map);
+    }
+    function updateMap() {
+        const addr = document.getElementById('addr').value.trim();
+        if (!addr) return;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`)
+            .then(r => r.json()).then(data => {
+                if (data && data[0]) { const lat=parseFloat(data[0].lat), lon=parseFloat(data[0].lon);
+                    map.setView([lat,lon],15); marker.setLatLng([lat,lon]); }
+                else alert('Address not found.');
+            }).catch(console.error);
     }
 
-    // AI & SEARCH LOGIC
+    // ========== CHAT ==========
+    function toggleChatPopup() { document.getElementById('chatPopup').classList.toggle('show'); if (document.getElementById('chatPopup').classList.contains('show')) listenToChat(); }
+    function listenToChat() {
+        db.collection("chats").where("buyerId","==",buyerId).orderBy("timestamp").onSnapshot(snap => {
+            const chatDiv = document.getElementById('chatMessages');
+            chatDiv.innerHTML = '';
+            snap.forEach(doc => {
+                const m = doc.data();
+                const div = document.createElement('div');
+                div.className = m.sender === 'buyer' ? 'chat-msg chat-buyer' : 'chat-msg chat-seller';
+                div.innerHTML = `<small>${m.sender}</small><br>${m.message}`;
+                chatDiv.appendChild(div);
+            });
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }, error => {
+            console.error("Chat listener error:", error);
+            if (error.code === 'failed-precondition') {
+                alert("Please create the required Firestore index. Check the console for the link.");
+            }
+        });
+    }
+    function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+        db.collection("chats").add({ buyerId, sender: 'buyer', message: msg, timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+            .then(() => input.value = '').catch(err => alert(err.message));
+    }
+    function clearChat() {
+        if (!confirm("Clear all messages?")) return;
+        db.collection("chats").where("buyerId","==",buyerId).get()
+            .then(snap => { const batch = db.batch(); snap.docs.forEach(d => batch.delete(d.ref)); return batch.commit(); })
+            .then(() => alert("Chat cleared.")).catch(err => alert(err.message));
+    }
+
+    // ========== SEARCH & OFFER FUNCTIONS ==========
+    
+    // Helper to escape single quotes for onclick strings
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'");
+    }
+
+    function parseStructuredInput(text) {
+        let cleaned = text.toLowerCase().replace(/i want|saya mau|something|i'd like|please/gi, "").trim();
+        let parts = cleaned.split(',').map(p => p.trim()).filter(p => p.length > 0);
+        if (parts.length === 0) return null;
+        
+        let results = [];
+        for (let part of parts) {
+            let match = part.match(/(.+?)\s+(\d+)$/);
+            if (match) {
+                let keyword = match[1].trim();
+                let qty = parseInt(match[2]);
+                if (keyword && qty > 0) {
+                    let words = keyword.split(' ');
+                    let primary = words[words.length - 1];
+                    results.push({ keyword: primary, qty, original: keyword });
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+        return results.length > 0 ? results : null;
+    }
+
+    function mapKeywordToCategory(keyword) {
+        let cleanKey = keyword.toLowerCase();
+        let targetCat = "";
+        let bonusKeywords = [];
+        
+        if (cleanKey.includes("beverage") || cleanKey.includes("minuman") || cleanKey.includes("drink") || cleanKey.includes("thirsty") || cleanKey.includes("haus") || cleanKey.includes("minum")) {
+            targetCat = "Beverage";
+            bonusKeywords = ["es", "ice", "teh", "kopi", "water", "soda", "jus", "air", "mineral"];
+        }
+        else if (cleanKey.includes("heavy meal") || cleanKey.includes("makanan berat") || cleanKey.includes("main course") || cleanKey.includes("hungry") || cleanKey.includes("lapar") || cleanKey.includes("makan")) {
+            targetCat = "Heavy Meal";
+            bonusKeywords = ["nasi", "ayam", "bebek", "soto", "mie", "rendang", "balado", "goreng", "panggang", "bakar", "steak", "kari"];
+        }
+        else if (cleanKey.includes("light snack") || cleanKey.includes("cemilan") || cleanKey.includes("snack")) {
+            targetCat = "Light Snack";
+            bonusKeywords = ["kentang", "singkong", "pisang", "roti", "biskuit", "gorengan", "bakwan", "risol"];
+        }
+        else if (cleanKey.includes("dessert") || cleanKey.includes("manis") || cleanKey.includes("sweet") || cleanKey.includes("pencuci mulut")) {
+            targetCat = "Dessert";
+            bonusKeywords = ["cake", "puding", "es krim", "susu", "chocolate", "cokelat", "martabak manis", "kue", "donat", "permen", "manis"];
+            bonusKeywords.push("teh manis", "kopi susu", "soda", "jus", "milkshake", "smoothie");
+        }
+        else if (cleanKey.includes("spicy") || cleanKey.includes("pedas") || cleanKey.includes("hot")) {
+            targetCat = "Heavy Meal";
+            bonusKeywords = ["rendang", "balado", "pedas", "sambal", "cabai", "mercon", "geprek", "rica", "seblak", "tulang"];
+        }
+        else if (cleanKey.includes("coffee") || cleanKey.includes("kopi")) {
+            targetCat = "Beverage";
+            bonusKeywords = ["kopi", "coffee", "espresso", "latte", "cappuccino", "americano"];
+        }
+        
+        return { targetCat, bonusKeywords };
+    }
+
+    function findBestProductForKeyword(keyword) {
+        let { targetCat, bonusKeywords } = mapKeywordToCategory(keyword);
+        let cleanKey = keyword.toLowerCase();
+        const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 1);
+        
+        let best = null;
+        let bestScore = -1;
+        
+        allSellers.forEach(s => {
+            let score = 0;
+            let matchItem = s.items[0];
+            
+            for (let item of s.items) {
+                const itemLow = item.toLowerCase();
+                if (itemLow.includes(cleanKey)) {
+                    score += 100;
+                    matchItem = item;
+                }
+                for (let term of searchTerms) {
+                    if (term.length > 2 && itemLow.includes(term)) {
+                        score += 50;
+                        matchItem = item;
+                        break;
+                    }
+                }
+            }
+            
+            if (targetCat && s.category === targetCat) {
+                score += 30;
+            }
+            
+            if ((cleanKey.includes("sweet") || cleanKey.includes("manis")) && s.category === "Beverage") {
+                if (matchItem.toLowerCase().includes("manis") || matchItem.toLowerCase().includes("susu") || matchItem.toLowerCase().includes("cokelat") || matchItem.toLowerCase().includes("soda")) {
+                    score += 70;
+                }
+            }
+            
+            if (score > 0 && score > bestScore) {
+                bestScore = score;
+                best = { ...s, matchItem, score };
+            }
+        });
+        
+        return best;
+    }
+
+    async function processStructuredOrder(keywordsQuantities, addr) {
+        let offerItems = [];
+        let total = 0;
+        
+        for (let kq of keywordsQuantities) {
+            const best = findBestProductForKeyword(kq.keyword);
+            if (best) {
+                const discountedPrice = best.discount ? best.basePrice * (1 - best.discount/100) : best.basePrice;
+                const itemTotal = discountedPrice * kq.qty;
+                offerItems.push({ product: best, qty: kq.qty, discountedPrice, itemTotal });
+                total += itemTotal;
+            } else {
+                addChat('bot', `Couldn't find a match for "${kq.original}". Showing general results.`);
+                runSmartRankedSearch(kq.original, Infinity, addr);
+                return;
+            }
+        }
+        
+        if (offerItems.length === 0) {
+            addChat('bot', 'No items found.');
+            return;
+        }
+        
+        let message = `🛒 **Seller Offer**<br>` + 
+            offerItems.map(item => `${item.qty} x ${item.product.matchItem} @ Rp ${item.discountedPrice.toLocaleString()} = Rp ${item.itemTotal.toLocaleString()}`).join('<br>') + 
+            `<br><b>Total: Rp ${total.toLocaleString()}</b>`;
+        addChat('bot', message);
+        
+        displayOfferedItems(offerItems, addr);
+    }
+
+    function displayOfferedItems(itemsWithQuantities, addr) {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        
+        itemsWithQuantities.forEach((item, index) => {
+            setTimeout(() => {
+                const s = item.product;
+                const qty = item.qty;
+                const cardId = "card-" + Math.random().toString(36).substr(2,9);
+                let badgeInfo = s.score >= 100 ? `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>` : '';
+                let offerBadge = s.offer ? `<span class="offer-badge"><i class="fas fa-bolt"></i> Instant Offer</span>` : '';
+                let imgSrc = s.imageUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(s.category)}?width=400&height=200&nologo=true&seed=${Math.random()*1000}`;
+                const videoSrc = s.videoUrl || "https://www.w3schools.com/html/mov_bbb.mp4";
+                const hasDiscount = s.discount && s.discount > 0;
+                const discountedPrice = hasDiscount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
+                const originalPriceHtml = hasDiscount ? `<span class="original-price">Rp ${s.basePrice.toLocaleString()}</span>` : '';
+                
+                // Escape quotes for onclick
+                const safeSeller = escapeQuotes(s.sellerName);
+                const safeItem = escapeQuotes(s.matchItem);
+                const safeAddr = escapeQuotes(addr);
+                
+                const card = `
+                <div class="card" id="${cardId}">
+                    <div class="card-media">
+                        <div class="card-img"><img src="${imgSrc}" class="food-pic" onerror="this.src='https://via.placeholder.com/400x200?text=Food'"><div class="cat-badge">${s.category}</div><div class="seller-tag">${s.sellerName}</div></div>
+                        <div class="card-video"><video autoplay muted loop playsinline><source src="${videoSrc}" type="video/mp4"></video></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="food-title">${s.matchItem} ${badgeInfo} ${offerBadge}</div>
+                        <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
+                        <div class="price-row"><div class="detail">${originalPriceHtml}<span class="final-price">Rp ${discountedPrice.toLocaleString()}</span></div><div style="font-size:0.9rem;">+ Ongkir</div></div>
+                        <div class="card-actions">
+                            <input type="number" id="qty-${cardId}" class="qty-input" value="${qty}" min="1">
+                            <button class="btn-all-options" onclick="showAllOptions('${safeItem}', '${safeSeller}', '${safeItem}', document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-list"></i> All Options</button>
+                            <button class="btn-cart-add" onclick="addToCart('${safeSeller}', '${safeItem}', ${discountedPrice}, '${cardId}', '${safeAddr}')"><i class="fas fa-cart-plus"></i> ADD</button>
+                            <button class="btn-bargain" onclick="showBargainModal('${safeItem}', '${safeSeller}', ${discountedPrice}, document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-tags"></i> Bargain</button>
+                        </div>
+                    </div>
+                </div>`;
+                feed.insertAdjacentHTML('beforeend', card);
+            }, index * 200);
+        });
+    }
+
     async function askOllama(promptText) {
         try {
             const response = await fetch("http://localhost:11434/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "llama3.1:8b",
-                    prompt: `Extract KEYWORD and BUDGET from: "${promptText}". Return JSON: {"keyword": "string", "budget": number}.`,
-                    stream: false,
-                    format: "json"
-                })
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: "llama3.1:8b", prompt: `Extract KEYWORD and BUDGET from: "${promptText}". Return JSON: {"keyword": "string", "budget": number}.`, stream: false, format: "json" })
             });
             const data = await response.json();
             return JSON.parse(data.response);
@@ -345,197 +920,375 @@
     async function startProcessing() {
         const rawText = document.getElementById('item').value.trim();
         const addr = document.getElementById('addr').value.trim();
-
-        if(!rawText || !addr) return alert("Please fill request & address!");
-
+        if (!rawText || !addr) return alert("Please fill request & address!");
+        
         addChat('user', `<b>"${rawText}"</b><br><small>To: ${addr}</small>`);
         document.getElementById('item').value = '';
-
+        
+        const structured = parseStructuredInput(rawText);
+        if (structured) {
+            const loadingId = "load-" + Date.now();
+            addChat('bot', `<span id="${loadingId}"><i class="fas fa-spinner fa-spin"></i> Preparing your offer...</span>`);
+            setTimeout(() => {
+                document.getElementById(loadingId).innerHTML = `✅ Offer ready!`;
+                processStructuredOrder(structured, addr);
+            }, 800);
+            return;
+        }
+        
         const loadingId = "load-" + Date.now();
         addChat('bot', `<span id="${loadingId}"><i class="fas fa-spinner fa-spin"></i> Understanding Intent...</span>`);
-
+        
         let keyword = rawText;
         let budget = Infinity;
-
-        const aiData = await askOllama(rawText);
         
-        const regexBudget = /(?:under|bawah|<|cheap)\s*(\d+)(k|rb|000)?/i;
-        const match = rawText.match(regexBudget);
-        
-        if (match) {
-            let num = parseInt(match[1]);
-            if(match[2] === 'k' || match[2] === 'rb') num *= 1000;
-            else if(num < 1000) num *= 1000; 
-            budget = num;
-            keyword = keyword.replace(match[0], "").trim();
-        } else if (aiData && aiData.budget > 0) {
-            budget = aiData.budget;
-            if(aiData.keyword) keyword = aiData.keyword;
+        const regexBudget = /(?:under|bawah|<|cheap|di bawah|kurang dari)\s*(\d+)(?:k|rb|000)?|\b(\d+)(?:k|rb|000)\b/gi;
+        let match;
+        let budgetMatch = null;
+        while ((match = regexBudget.exec(rawText)) !== null) {
+            let num = match[1] || match[2];
+            if (num) {
+                let value = parseInt(num);
+                if (match[0].toLowerCase().includes('k') || match[0].toLowerCase().includes('rb')) value *= 1000;
+                budget = value;
+                budgetMatch = match[0];
+                break;
+            }
         }
-
-        document.getElementById(loadingId).innerHTML = `Intent Detected: <b>${keyword}</b>`;
+        if (budgetMatch) {
+            keyword = rawText.replace(budgetMatch, '').trim();
+        } else {
+            const aiData = await askOllama(rawText);
+            if (aiData && aiData.budget > 0) {
+                budget = aiData.budget;
+                if (aiData.keyword) keyword = aiData.keyword;
+            }
+        }
         
+        document.getElementById(loadingId).innerHTML = `Intent Detected: <b>${keyword}</b>`;
         runSmartRankedSearch(keyword, budget, addr);
     }
 
-    // UPDATED search with discount and offer sorting (budget compares item price only)
+    // ========== UPDATED SEARCH FUNCTION: show ALL instant offers if any ==========
     function runSmartRankedSearch(keyword, budget, addr) {
         const feed = document.getElementById('feed');
-        feed.innerHTML = ''; 
-
-        // Intent mapping (unchanged)
-        let cleanKey = keyword.toLowerCase().replace(/i want|saya mau|buy|cari|would like|to have|something|im|i am/g, "").trim();
+        feed.innerHTML = '';
         
-        let targetCat = "";
-        let bonusKeywords = [];
-
-        if(cleanKey.includes("thirsty") || cleanKey.includes("haus") || cleanKey.includes("minum")) {
-            targetCat = "Beverage";
-            bonusKeywords = ["es", "ice", "teh", "kopi", "water"];
-        }
-        else if(cleanKey.includes("sweet") || cleanKey.includes("manis")) {
-            targetCat = "Dessert";
-            bonusKeywords = ["susu", "kopi susu", "chocolate", "cokelat", "manis", "sugar", "cake", "martabak"];
-        }
-        else if(cleanKey.includes("spicy") || cleanKey.includes("pedas") || cleanKey.includes("hot")) {
-            targetCat = "Heavy Meal"; 
-            bonusKeywords = ["rendang", "balado", "pedas", "sambal", "cabai", "mercon", "geprek"];
-        }
-        else if(cleanKey.includes("hungry") || cleanKey.includes("lapar") || cleanKey.includes("makan")) {
-            targetCat = "Heavy Meal";
-            bonusKeywords = ["nasi", "ayam", "bebek", "soto", "mie"];
-        }
-        else if(cleanKey.includes("coffee") || cleanKey.includes("kopi")) targetCat = "Beverage";
-        else if(cleanKey.includes("snack") || cleanKey.includes("cemilan")) targetCat = "Light Snack";
-        else if(cleanKey.includes("dessert")) targetCat = "Dessert";
-        else if(cleanKey.includes("heavy") || cleanKey.includes("berat")) targetCat = "Heavy Meal";
-
-        const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 2);
-
+        let { targetCat, bonusKeywords } = mapKeywordToCategory(keyword);
+        let cleanKey = keyword.toLowerCase().replace(/i want|saya mau|buy|cari|would like|to have|something|im|i am/g, "").trim();
+        const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 1);
+        
         let results = allSellers.map(s => {
             let score = 0;
             let matchItem = s.items[0];
-
-            let bestItem = s.items.find(i => {
-                const iLow = i.toLowerCase();
-                return searchTerms.some(term => iLow.includes(term));
-            });
-
-            if(bestItem) { score += 100; matchItem = bestItem; }
-
-            if(targetCat && s.category === targetCat) score += 50;
             
-            if(cleanKey.includes("sweet") && s.category === "Beverage" && matchItem.toLowerCase().includes("susu")) {
-                score += 70;
-            }
-
-            // Calculate discounted price if discount exists
-            const discountedPrice = s.discount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
-            // BUDGET CHECK: compare only item price (discountedPrice) with budget
-            if(budget !== Infinity && discountedPrice > budget) score = -1; 
-
-            return { ...s, score, matchItem, discountedPrice };
-        });
-
-        results = results.filter(r => r.score > 0);
-
-        // Sort by offer (desc) then by score
-        results.sort((a, b) => {
-            if (a.offer && !b.offer) return -1;
-            if (!a.offer && b.offer) return 1;
-            if (a.offer && b.offer) {
-                return b.offer.seconds - a.offer.seconds || b.offer.nanoseconds - a.offer.nanoseconds;
-            }
-            return b.score - a.score;
-        });
-
-        if(results.length === 0) {
-            feed.innerHTML = `<div style="text-align:center; margin-top:50px; color:#aaa;">No items found.</div>`;
-            return;
-        }
-
-        results.forEach((s, i) => {
-            setTimeout(() => {
-                const cardId = "card-" + Math.random().toString(36).substr(2, 9);
-                let badgeInfo = "";
-                if(s.score >= 100) badgeInfo = `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>`;
-                let offerBadge = s.offer ? `<span class="offer-badge"><i class="fas fa-bolt"></i> Instant Offer</span>` : '';
-
-                let imgSrc;
-                if (s.imageUrl) {
-                    imgSrc = s.imageUrl;
-                } else {
-                    let searchTerm = s.category;
-                    const lowerItem = s.matchItem.toLowerCase();
-                    if (lowerItem.includes('nasi')) searchTerm = 'fried rice meal';
-                    else if (lowerItem.includes('martabak')) searchTerm = 'martabak sweet pancake';
-                    else if (lowerItem.includes('kopi')) searchTerm = 'coffee cup';
-                    else if (lowerItem.includes('teh')) searchTerm = 'iced tea';
-                    else if (lowerItem.includes('pedas') || lowerItem.includes('spicy')) searchTerm = 'spicy chili food';
-                    
-                    const seed = Math.floor(Math.random() * 1000);
-                    imgSrc = `https://image.pollinations.ai/prompt/${encodeURIComponent(searchTerm)}?width=400&height=200&nologo=true&seed=${seed}`;
+            for (let item of s.items) {
+                const itemLow = item.toLowerCase();
+                if (cleanKey && itemLow.includes(cleanKey)) {
+                    score += 100;
+                    matchItem = item;
                 }
-
-                // Prepare price display
-                const hasDiscount = s.discount && s.discount > 0;
-                const displayPrice = s.discountedPrice;
-                const originalPriceHtml = hasDiscount ? `<span class="original-price">Rp ${s.basePrice.toLocaleString()}</span>` : '';
-
-                const card = `
-                <div class="card" id="${cardId}">
-                    <div class="card-img">
-                        <img src="${imgSrc}" class="food-pic" style="background:#eee;" onerror="this.src='https://via.placeholder.com/400x200?text=Food'">
-                        <div class="cat-badge">${s.category}</div>
-                        <div class="seller-tag">${s.sellerName}</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="food-title">
-                            ${s.matchItem} ${badgeInfo} ${offerBadge}
+                for (let term of searchTerms) {
+                    if (term.length > 1 && itemLow.includes(term)) {
+                        score += 50;
+                        matchItem = item;
+                        break;
+                    }
+                }
+            }
+            
+            if (targetCat && s.category === targetCat) {
+                score += 30;
+            }
+            
+            if ((cleanKey.includes("sweet") || cleanKey.includes("manis")) && s.category === "Beverage") {
+                if (matchItem.toLowerCase().includes("manis") || matchItem.toLowerCase().includes("susu") || matchItem.toLowerCase().includes("cokelat") || matchItem.toLowerCase().includes("soda")) {
+                    score += 70;
+                }
+            }
+            
+            const discountedPrice = s.discount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
+            if (budget !== Infinity && discountedPrice > budget) score = -1;
+            
+            return { ...s, score, matchItem, discountedPrice };
+        }).filter(r => r.score > 0);
+        
+        // Separate instant offers and non-instant
+        const instantOffers = results.filter(r => r.offer);
+        const nonInstant = results.filter(r => !r.offer);
+        
+        if (instantOffers.length > 0) {
+            // Show ALL instant offers, sorted by score
+            instantOffers.sort((a, b) => b.score - a.score);
+            instantOffers.forEach((s, i) => {
+                setTimeout(() => {
+                    const cardId = "card-" + Math.random().toString(36).substr(2,9);
+                    let badgeInfo = s.score >= 100 ? `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>` : '';
+                    let offerBadge = `<span class="offer-badge"><i class="fas fa-bolt"></i> Instant Offer</span>`;
+                    let imgSrc = s.imageUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(s.category)}?width=400&height=200&nologo=true&seed=${Math.random()*1000}`;
+                    const videoSrc = s.videoUrl || "https://www.w3schools.com/html/mov_bbb.mp4";
+                    const hasDiscount = s.discount && s.discount > 0;
+                    const displayPrice = s.discountedPrice;
+                    const originalPriceHtml = hasDiscount ? `<span class="original-price">Rp ${s.basePrice.toLocaleString()}</span>` : '';
+                    
+                    const safeSeller = escapeQuotes(s.sellerName);
+                    const safeItem = escapeQuotes(s.matchItem);
+                    const safeAddr = escapeQuotes(addr);
+                    
+                    const card = `
+                    <div class="card" id="${cardId}">
+                        <div class="card-media">
+                            <div class="card-img"><img src="${imgSrc}" class="food-pic" onerror="this.src='https://via.placeholder.com/400x200?text=Food'"><div class="cat-badge">${s.category}</div><div class="seller-tag">${s.sellerName}</div></div>
+                            <div class="card-video"><video autoplay muted loop playsinline><source src="${videoSrc}" type="video/mp4"></video></div>
                         </div>
-                        <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
-                        <div class="price-row">
-                            <div class="detail">
-                                ${originalPriceHtml}
-                                <span class="final-price">Rp ${displayPrice.toLocaleString()}</span>
+                        <div class="card-body">
+                            <div class="food-title">${s.matchItem} ${badgeInfo} ${offerBadge}</div>
+                            <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
+                            <div class="price-row"><div class="detail">${originalPriceHtml}<span class="final-price">Rp ${displayPrice.toLocaleString()}</span></div><div style="font-size:0.9rem;">+ Ongkir</div></div>
+                            <div class="card-actions">
+                                <input type="number" id="qty-${cardId}" class="qty-input" value="1" min="1">
+                                <button class="btn-all-options" onclick="showAllOptions('${safeItem}', '${safeSeller}', '${safeItem}', document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-list"></i> All Options</button>
+                                <button class="btn-cart-add" onclick="addToCart('${safeSeller}', '${safeItem}', ${displayPrice}, '${cardId}', '${safeAddr}')"><i class="fas fa-cart-plus"></i> ADD</button>
+                                <button class="btn-bargain" onclick="showBargainModal('${safeItem}', '${safeSeller}', ${displayPrice}, document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-tags"></i> Bargain</button>
                             </div>
-                            <div style="font-size:0.9rem;">+ Ongkir</div>
                         </div>
-                        <div class="card-actions">
-                            <input type="number" id="qty-${cardId}" class="qty-input" value="1" min="1">
-                            <button class="btn-cart-add" onclick="addToCart('${s.sellerName}', '${s.matchItem}', ${displayPrice}, '${cardId}', '${addr}')">
-                                <i class="fas fa-cart-plus"></i> ADD
-                            </button>
+                    </div>`;
+                    feed.insertAdjacentHTML('beforeend', card);
+                }, i * 200);
+            });
+        } else {
+            // No instant offers: show all matching results, sorted by score
+            results.sort((a, b) => b.score - a.score);
+            if (results.length === 0) {
+                feed.innerHTML = `<div style="text-align:center; margin-top:50px; color:#aaa;">No items found.</div>`;
+                return;
+            }
+            results.forEach((s, i) => {
+                setTimeout(() => {
+                    const cardId = "card-" + Math.random().toString(36).substr(2,9);
+                    let badgeInfo = s.score >= 100 ? `<span style="font-size:0.7rem; background:#dcfce7; padding:2px 5px; border-radius:4px; color:green;">Top Pick</span>` : '';
+                    let offerBadge = s.offer ? `<span class="offer-badge"><i class="fas fa-bolt"></i> Instant Offer</span>` : '';
+                    let imgSrc = s.imageUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(s.category)}?width=400&height=200&nologo=true&seed=${Math.random()*1000}`;
+                    const videoSrc = s.videoUrl || "https://www.w3schools.com/html/mov_bbb.mp4";
+                    const hasDiscount = s.discount && s.discount > 0;
+                    const displayPrice = s.discountedPrice;
+                    const originalPriceHtml = hasDiscount ? `<span class="original-price">Rp ${s.basePrice.toLocaleString()}</span>` : '';
+                    
+                    const safeSeller = escapeQuotes(s.sellerName);
+                    const safeItem = escapeQuotes(s.matchItem);
+                    const safeAddr = escapeQuotes(addr);
+                    
+                    const card = `
+                    <div class="card" id="${cardId}">
+                        <div class="card-media">
+                            <div class="card-img"><img src="${imgSrc}" class="food-pic" onerror="this.src='https://via.placeholder.com/400x200?text=Food'"><div class="cat-badge">${s.category}</div><div class="seller-tag">${s.sellerName}</div></div>
+                            <div class="card-video"><video autoplay muted loop playsinline><source src="${videoSrc}" type="video/mp4"></video></div>
                         </div>
-                    </div>
-                </div>`;
-                feed.insertAdjacentHTML('beforeend', card);
-            }, i * 200);
-        });
+                        <div class="card-body">
+                            <div class="food-title">${s.matchItem} ${badgeInfo} ${offerBadge}</div>
+                            <div class="detail"><i class="fab fa-whatsapp"></i> ${s.contact}</div>
+                            <div class="price-row"><div class="detail">${originalPriceHtml}<span class="final-price">Rp ${displayPrice.toLocaleString()}</span></div><div style="font-size:0.9rem;">+ Ongkir</div></div>
+                            <div class="card-actions">
+                                <input type="number" id="qty-${cardId}" class="qty-input" value="1" min="1">
+                                <button class="btn-all-options" onclick="showAllOptions('${safeItem}', '${safeSeller}', '${safeItem}', document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-list"></i> All Options</button>
+                                <button class="btn-cart-add" onclick="addToCart('${safeSeller}', '${safeItem}', ${displayPrice}, '${cardId}', '${safeAddr}')"><i class="fas fa-cart-plus"></i> ADD</button>
+                                <button class="btn-bargain" onclick="showBargainModal('${safeItem}', '${safeSeller}', ${displayPrice}, document.getElementById('qty-${cardId}').value, '${safeAddr}')"><i class="fas fa-tags"></i> Bargain</button>
+                            </div>
+                        </div>
+                    </div>`;
+                    feed.insertAdjacentHTML('beforeend', card);
+                }, i * 200);
+            });
+        }
     }
 
-    function showHistory() {
-        const list = document.getElementById('histList');
-        document.getElementById('histModal').style.display = 'flex';
-        list.innerHTML = 'Fetching...';
+    // ========== ALL OPTIONS ==========
+    function findAllOptions(keyword, currentSeller, currentItem, qty, addr) {
+        let { targetCat, bonusKeywords } = mapKeywordToCategory(keyword);
+        let cleanKey = keyword.toLowerCase();
+        const searchTerms = [cleanKey, ...bonusKeywords].filter(k => k.length > 1);
+        
+        let matches = allSellers.map(s => {
+            let matchItem = null;
+            for (let item of s.items) {
+                const itemLow = item.toLowerCase();
+                if (cleanKey && itemLow.includes(cleanKey)) {
+                    matchItem = item;
+                    break;
+                }
+                for (let term of searchTerms) {
+                    if (term.length > 1 && itemLow.includes(term)) {
+                        matchItem = item;
+                        break;
+                    }
+                }
+            }
+            if (!matchItem && targetCat && s.category === targetCat) {
+                matchItem = s.items[0];
+            }
+            if (!matchItem) return null;
+            
+            const discountedPrice = s.discount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
+            return {
+                sellerName: s.sellerName,
+                sellerId: s.id,
+                item: matchItem,
+                originalPrice: s.basePrice,
+                discountedPrice,
+                discount: s.discount,
+                contact: s.contact,
+                imageUrl: s.imageUrl,
+                videoUrl: s.videoUrl
+            };
+        }).filter(s => s !== null);
+        
+        const exactMatches = matches.filter(m => m.item.toLowerCase().includes(cleanKey));
+        const otherMatches = matches.filter(m => !m.item.toLowerCase().includes(cleanKey));
+        
+        exactMatches.sort((a, b) => a.discountedPrice - b.discountedPrice);
+        otherMatches.sort((a, b) => a.discountedPrice - b.discountedPrice);
+        
+        return [...exactMatches, ...otherMatches];
+    }
 
+    function showAllOptions(keyword, currentSeller, currentItem, qty, addr) {
+        const options = findAllOptions(keyword, currentSeller, currentItem, qty, addr);
+        const listDiv = document.getElementById('allOptionsList');
+        if (options.length === 0) {
+            listDiv.innerHTML = `<p style="text-align:center; color:#999;">No options found.</p>`;
+        } else {
+            let html = '';
+            options.forEach((opt, index) => {
+                const hasDiscount = opt.discount > 0;
+                const originalHtml = hasDiscount ? `<span class="original-price">Rp ${opt.originalPrice.toLocaleString()}</span>` : '';
+                const optionId = "opt-"+Date.now()+"-"+index;
+                
+                // Escape quotes
+                const safeSeller = escapeQuotes(opt.sellerName);
+                const safeItem = escapeQuotes(opt.item);
+                const safeAddr = escapeQuotes(addr);
+                
+                html += `
+                <div class="option-item">
+                    <div class="option-info">
+                        <div class="item-name">${opt.item}</div>
+                        <div class="seller">${opt.sellerName}</div>
+                        <div class="option-price">Rp ${opt.discountedPrice.toLocaleString()} ${originalHtml}</div>
+                        <div class="option-contact"><i class="fas fa-phone-alt"></i> ${opt.contact}</div>
+                    </div>
+                    <div class="option-actions">
+                        <input type="number" id="${optionId}" class="option-qty" value="1" min="1">
+                        <button class="btn-option-add" onclick="addToCartFromAllOptions('${safeSeller}', '${safeItem}', ${opt.discountedPrice}, document.getElementById('${optionId}').value, '${safeAddr}')"><i class="fas fa-cart-plus"></i> ADD</button>
+                        <button class="btn-option-bargain" onclick="showBargainFromAllOptions('${safeItem}', '${safeSeller}', ${opt.discountedPrice}, document.getElementById('${optionId}').value, '${safeAddr}')"><i class="fas fa-tags"></i> Bargain</button>
+                    </div>
+                </div>`;
+            });
+            listDiv.innerHTML = html;
+        }
+        document.getElementById('allOptionsModal').style.display = 'flex';
+    }
+
+    function addToCartFromAllOptions(seller, item, price, qty, addr) {
+        qty = parseInt(qty) || 1;
+        const total = price * qty + 3000;
+        cart.push({ seller, item, price: total, qty, id: 'allopt-'+Date.now(), address: addr });
+        updateCartBadge();
+        alert(`Added ${qty} x ${item} from ${seller} to cart!`);
+        closeAllOptionsModal();
+    }
+
+    function showBargainFromAllOptions(item, seller, price, qty, addr) {
+        closeAllOptionsModal();
+        showBargainModal(item, seller, price, qty, addr);
+    }
+
+    function closeAllOptionsModal() { document.getElementById('allOptionsModal').style.display = 'none'; }
+
+    // ========== BARGAIN ==========
+    function findBargains(itemName, currentSeller) {
+        let normalized = itemName.toLowerCase();
+        return allSellers.map(s => {
+            let matchItem = s.items.find(i => i.toLowerCase().includes(normalized));
+            if (!matchItem) return null;
+            const discountedPrice = s.discount ? s.basePrice * (1 - s.discount/100) : s.basePrice;
+            return {
+                sellerName: s.sellerName,
+                sellerId: s.id,
+                item: matchItem,
+                originalPrice: s.basePrice,
+                discountedPrice,
+                discount: s.discount,
+                contact: s.contact,
+                imageUrl: s.imageUrl
+            };
+        }).filter(s => s !== null && s.sellerName !== currentSeller)
+          .sort((a, b) => a.discountedPrice - b.discountedPrice);
+    }
+
+    function showBargainModal(itemName, currentSeller, currentPrice, qty, addr) {
+        const bargains = findBargains(itemName, currentSeller);
+        const listDiv = document.getElementById('bargainList');
+        if (bargains.length === 0) {
+            listDiv.innerHTML = `<p style="text-align:center; color:#999;">No other sellers found.</p>`;
+        } else {
+            let html = `<p style="margin-bottom:10px;"><strong>Current price:</strong> Rp ${currentPrice.toLocaleString()}</p>`;
+            bargains.forEach((b, index) => {
+                const hasDiscount = b.discount > 0;
+                const originalHtml = hasDiscount ? `<span class="original-price">Rp ${b.originalPrice.toLocaleString()}</span>` : '';
+                const bargainId = "bargain-"+Date.now()+"-"+index;
+                
+                // Escape quotes
+                const safeSeller = escapeQuotes(b.sellerName);
+                const safeItem = escapeQuotes(b.item);
+                const safeAddr = escapeQuotes(addr);
+                
+                html += `
+                <div class="bargain-item">
+                    <div class="bargain-info">
+                        <div class="seller">${b.sellerName}</div>
+                        <div class="price">Rp ${b.discountedPrice.toLocaleString()} ${originalHtml}</div>
+                        <div class="contact"><i class="fas fa-phone-alt"></i> ${b.contact}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" id="${bargainId}" class="option-qty" value="1" min="1" style="width:50px;">
+                        <button class="btn-bargain-add" onclick="addToCartFromBargain('${safeSeller}', '${safeItem}', ${b.discountedPrice}, document.getElementById('${bargainId}').value, '${safeAddr}')"><i class="fas fa-cart-plus"></i> ADD</button>
+                    </div>
+                </div>`;
+            });
+            listDiv.innerHTML = html;
+        }
+        document.getElementById('bargainModal').style.display = 'flex';
+    }
+
+    function addToCartFromBargain(seller, item, price, qty, addr) {
+        qty = parseInt(qty) || 1;
+        const total = price * qty + 3000;
+        cart.push({ seller, item, price: total, qty, id: 'bargain-'+Date.now(), address: addr });
+        updateCartBadge();
+        alert(`Added ${qty} x ${item} from ${seller} to cart!`);
+        closeBargainModal();
+    }
+
+    function closeBargainModal() { document.getElementById('bargainModal').style.display = 'none'; }
+
+    // ========== HISTORY ==========
+    function showHistory() {
+        document.getElementById('histModal').style.display = 'flex';
+        document.getElementById('histList').innerHTML = 'Fetching...';
         db.collection("orders").orderBy("time", "desc").limit(10).get().then(snap => {
-            if(snap.empty) { list.innerHTML = '<div style="padding:20px; text-align:center;">No history.</div>'; return; }
+            if (snap.empty) { document.getElementById('histList').innerHTML = '<p>No history.</p>'; return; }
             let h = '';
             snap.forEach(doc => {
                 const d = doc.data();
-                const time = d.time ? d.time.toDate().toLocaleTimeString() : '-';
-                const addrDisplay = d.address ? `<br><small style="color:#666;">📍 ${d.address}</small>` : '';
-                h += `<div class="cart-item">
-                        <div><b>${d.item}</b><br><small>${d.seller}</small>${addrDisplay}</div>
-                        <div style="text-align:right"><b>Rp ${d.total.toLocaleString()}</b><br><small>${time}</small></div>
-                      </div>`;
+                const time = d.time ? d.time.toDate().toLocaleString() : '';
+                h += `<div class="cart-item"><div><b>${d.item}</b><br><small>${d.seller}</small><br><small>📍 ${d.address}</small></div><div style="text-align:right"><b>Rp ${d.total.toLocaleString()}</b><br><small>${time}</small></div></div>`;
             });
-            list.innerHTML = h;
+            document.getElementById('histList').innerHTML = h;
         });
     }
-
     function closeHistModal() { document.getElementById('histModal').style.display = 'none'; }
+
+    // ========== UTILS ==========
     function setInput(val) { document.getElementById('item').value = val; }
     function addChat(sender, html) {
         const c = document.getElementById('chat');
@@ -545,9 +1298,13 @@
     function tab(mode, el) {
         document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
         el.classList.add('active');
-        if(mode === 'req') document.body.classList.remove('tab-auc');
-        else document.body.classList.add('tab-auc');
+        document.body.classList.toggle('tab-auc', mode === 'auc');
     }
+
+    // ========== INIT ==========
+    window.onload = function() {
+        initMap();
+    };
 </script>
 </body>
 </html>
